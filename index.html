@@ -1,37 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invitation Calendrier</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+        #btn { padding: 15px 25px; font-size: 18px; background-color: #007AFF; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        #btn:active { background-color: #0056b3; }
+        h1 { color: #333; margin-bottom: 20px; }
+    </style>
 </head>
 <body>
+
     <h1 id="title">Chargement...</h1>
     <button id="btn">Ajouter à mon calendrier</button>
 
     <script>
-document.getElementById('btn').onclick = function() {
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-SUMMARY:${titre}
-DTSTART:${date}
-DTEND:${date}
-END:VEVENT
-END:VCALENDAR`;
+        // 1. Récupération des paramètres ou valeurs par défaut pour le test
+        const params = new URLSearchParams(window.location.search);
+        const titre = params.get('t') || "Événement de Test";
+        const date = params.get('d') || "20260101T120000Z";
 
-    // 1. On encode le contenu en Base64 pour Safari
-    const base64Content = btoa(unescape(encodeURIComponent(icsContent)));
-    const dataUri = 'data:text/calendar;base64,' + base64Content;
+        // Affichage du titre sur la page
+        document.getElementById('title').innerText = titre;
 
-    // 2. On crée un lien temporaire
-    const link = document.createElement('a');
-    link.href = dataUri;
-    link.download = "evenement.ics";
-    
-    // 3. IMPORTANT pour Safari : ajouter le lien au document avant de cliquer
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
+        document.getElementById('btn').onclick = function() {
+            // 2. Construction du contenu ICS
+            // On s'assure qu'il n'y a pas d'espaces bizarres au début des lignes
+            const icsContent = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                `SUMMARY:${titre}`,
+                `DTSTART:${date}`,
+                `DTEND:${date}`,
+                "END:VEVENT",
+                "END:VCALENDAR"
+            ].join("\r\n");
+
+            // 3. Encodage Base64 compatible Safari mobile
+            const base64Content = btoa(unescape(encodeURIComponent(icsContent)));
+            const dataUri = 'data:text/calendar;base64,' + base64Content;
+
+            // 4. Création du lien de téléchargement
+            const link = document.createElement('a');
+            link.href = dataUri;
+            link.download = "evenement.ics";
+            
+            // Requis pour certains navigateurs mobiles
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
     </script>
 </body>
 </html>
