@@ -5,50 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invitation Calendrier</title>
     <style>
-        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
-        #btn { padding: 15px 25px; font-size: 18px; background-color: #007AFF; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; }
-        #btn:active { background-color: #0056b3; }
-        h1 { color: #333; margin-bottom: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f2f2f7; padding: 20px; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 350px; }
+        h1 { font-size: 22px; color: #1c1c1e; margin: 0 0 10px 0; }
+        p { color: #8e8e93; margin-bottom: 25px; font-size: 15px; }
+        #btn { width: 100%; padding: 16px; font-size: 17px; background-color: #007AFF; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: transform 0.1s ease; }
+        #btn:active { transform: scale(0.98); background-color: #0056b3; }
     </style>
 </head>
 <body>
 
-    <h1 id="title">Chargement...</h1>
-    <button id="btn">Ajouter à mon calendrier</button>
+    <div class="card">
+        <h1 id="ui-title">Chargement...</h1>
+        <p id="ui-date">Préparation de votre invitation</p>
+        <button id="btn">Ajouter au calendrier</button>
+    </div>
 
     <script>
-        // 1. Récupération des paramètres ou valeurs par défaut pour le test
+        // 1. Extraction des paramètres de l'URL
         const params = new URLSearchParams(window.location.search);
-        const titre = params.get('t') || "Événement de Test";
-        const date = params.get('d') || "20260101T120000Z";
+        
+        const config = {
+            title: params.get('t') || "Nouvel événement",
+            start: params.get('ds') || "20260101T120000Z",
+            end: params.get('de') || "",
+            allDay: params.get('ad') === '1',
+            url: params.get('url') || "",
+            notes: params.get('n') || "",
+            alert: params.get('al') || "",     // Minutes avant (ex: 15)
+            repeat: params.get('r') || "",      // DAILY, WEEKLY, MONTHLY, YEARLY
+            travel: params.get('tr') || ""      // Secondes (X-APPLE-TRAVEL-DURATION)
+        };
 
-        // Affichage du titre sur la page
-        document.getElementById('title').innerText = titre;
+        // Mise à jour de l'interface
+        document.getElementById('ui-title').innerText = config.title;
+        document.getElementById('ui-date').innerText = config.allDay ? "Toute la journée" : "Événement programmé";
 
         document.getElementById('btn').onclick = function() {
             // 2. Construction du contenu ICS
-            // On s'assure qu'il n'y a pas d'espaces bizarres au début des lignes
-            const icsContent = [
+            let icsLines = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
+                "PRODID:-//Mon App//SwiftUI//FR",
                 "BEGIN:VEVENT",
-                `SUMMARY:${titre}`,
-                `DTSTART:${date}`,
-                `DTEND:${date}`,
-                "END:VEVENT",
-                "END:VCALENDAR"
-            ].join("\r\n");
+                `SUMMARY:${config.title}`,
+            ];
 
-            // 3. Encodage Base64 compatible Safari mobile
+            // Gestion All Day vs Heure précise
+            if (config.allDay) {
+                // Pour All Day, on ne met que la date YYYYMMDD
+                const dateOnly = config.start.substring(0, 8);
+                icsLines.push(`DTSTART;VALUE=DATE:${dateOnly}`);
+            } else {
+                icsLines.push(`DTSTART:${config.start}`);
+                if (config.end) icsLines.push(`DTEND:${config.end}`);
+            }
+
+            // URL & Notes
+            if (config.url) icsLines.push(`URL:${config.url}`);
+            if (config.notes) icsLines.push(`DESCRIPTION:${config.notes}`);
+
+            // Répétition (RRULE)
+            if (config.repeat) icsLines.push(`RRULE:FREQ=${config.repeat.toUpperCase()}`);
+
+            // Temps de trajet (Spécifique Apple)
+            if (config.travel) icsLines.push(`X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT${config.travel}S`);
+
+            // Alerte (VALARM)
+            if (config.alert) {
+                icsLines.push("BEGIN:VALARM");
+                icsLines.push("ACTION:DISPLAY");
+                icsLines.push(`TRIGGER:-PT${config.alert}M`);
+                icsLines.push("DESCRIPTION:Rappel");
+                icsLines.push("END:VALARM");
+            }
+
+            icsLines.push("END:VEVENT");
+            icsLines.push("END:VCALENDAR");
+
+            const icsContent = icsLines.join("\r\n");
+
+            // 3. Encodage et Téléchargement
             const base64Content = btoa(unescape(encodeURIComponent(icsContent)));
             const dataUri = 'data:text/calendar;base64,' + base64Content;
 
-            // 4. Création du lien de téléchargement
             const link = document.createElement('a');
             link.href = dataUri;
             link.download = "evenement.ics";
-            
-            // Requis pour certains navigateurs mobiles
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
