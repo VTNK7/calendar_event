@@ -8,23 +8,30 @@
     <button id="btn">Ajouter à mon calendrier</button>
 
     <script>
-        // 1. Récupérer les infos dans l'URL (ex: ?t=Anniversaire&d=20260520T100000Z)
-        const params = new URLSearchParams(window.location.search);
-        const titre = params.get('t') || "Événement sans titre";
-        const date = params.get('d') || "20260101T000000Z";
+document.getElementById('btn').onclick = function() {
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${titre}
+DTSTART:${date}
+DTEND:${date}
+END:VEVENT
+END:VCALENDAR`;
 
-        document.getElementById('title').innerText = titre;
+    // 1. On encode le contenu en Base64 pour Safari
+    const base64Content = btoa(unescape(encodeURIComponent(icsContent)));
+    const dataUri = 'data:text/calendar;base64,' + base64Content;
 
-        // 2. Fonction pour générer le fichier .ics au clic
-        document.getElementById('btn').onclick = function() {
-            const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${titre}\nDTSTART:${date}\nEND:${date}\nEND:VEVENT\nEND:VCALENDAR`;
-            const blob = new Blob([icsContent], { type: 'text/calendar' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "evenement.ics";
-            a.click();
-        };
+    // 2. On crée un lien temporaire
+    const link = document.createElement('a');
+    link.href = dataUri;
+    link.download = "evenement.ics";
+    
+    // 3. IMPORTANT pour Safari : ajouter le lien au document avant de cliquer
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
     </script>
 </body>
 </html>
