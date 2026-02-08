@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invitation Calendrier</title>
+</head>
+<body>
+    <h1 id="title">Chargement...</h1>
+    <button id="btn">Ajouter à mon calendrier</button>
+
+    <script>
+        // 1. Récupérer les infos dans l'URL (ex: ?t=Anniversaire&d=20260520T100000Z)
+        const params = new URLSearchParams(window.location.search);
+        const titre = params.get('t') || "Événement sans titre";
+        const date = params.get('d') || "20260101T000000Z";
+
+        document.getElementById('title').innerText = titre;
+
+        // 2. Fonction pour générer le fichier .ics au clic
+        document.getElementById('btn').onclick = function() {
+            const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${titre}\nDTSTART:${date}\nEND:${date}\nEND:VEVENT\nEND:VCALENDAR`;
+            const blob = new Blob([icsContent], { type: 'text/calendar' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "evenement.ics";
+            a.click();
+        };
+    </script>
+</body>
+</html>
